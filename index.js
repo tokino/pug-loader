@@ -1,42 +1,42 @@
-var path = require("path");
-var dirname = path.dirname;
-var loaderUtils = require("loader-utils");
-var nodeResolve = require("resolve").sync;
-var walk = require('pug-walk');
+const path = require("path");
+const dirname = path.dirname;
+const loaderUtils = require("loader-utils");
+const nodeResolve = require("resolve").sync;
+const walk = require('pug-walk');
 
 module.exports = function(source) {
 	this.cacheable && this.cacheable();
 
-	var modulePaths = {};
+	const modulePaths = {};
 	modulePaths.pug = require.resolve("pug");
 	modulePaths.load = nodeResolve("pug-load", {basedir: dirname(modulePaths.pug)});
 	modulePaths.runtime = nodeResolve("pug-runtime", {basedir: dirname(modulePaths.pug)});
 
-	var pug = require(modulePaths.pug);
-	var load = require(modulePaths.load);
+	const pug = require(modulePaths.pug);
+	const load = require(modulePaths.load);
 
-	var req = loaderUtils.getRemainingRequest(this).replace(/^!/, "");
+	const req = loaderUtils.getRemainingRequest(this).replace(/^!/, "");
 
-	var query = loaderUtils.getOptions(this) || {};
+	const query = loaderUtils.getOptions(this) || {};
 
-	var loadModule = this.loadModule;
-	var resolve = this.resolve;
-	var loaderContext = this;
-	var callback;
+	const loadModule = this.loadModule;
+	const resolve = this.resolve;
+	const loaderContext = this;
+	let callback;
 
-	var fileContents = {};
-	var filePaths = {};
+	const fileContents = {};
+	const filePaths = {};
 
-	var missingFileMode = false;
+	let missingFileMode = false;
 	function getFileContent(context, request) {
 		request = loaderUtils.urlToRequest(request, query.root)
-		var baseRequest = request;
-		var filePath;
+		const baseRequest = request;
+		let filePath;
 
 		filePath = filePaths[context + " " + request];
 		if(filePath) return filePath;
 
-		var isSync = true;
+		let isSync = true;
 		resolve(context, request, function(err, _request) {
 			if(err) {
 				resolve(context, request, function(err2, _request) {
@@ -72,7 +72,7 @@ module.exports = function(source) {
 		throw "continue";
 	}
 
-	var plugin = loadModule ? {
+	const plugin = loadModule ? {
 		postParse: function (ast) {
 			return walk(ast, function (node) {
 				if ([
@@ -93,7 +93,7 @@ module.exports = function(source) {
 				return load.resolve(request, source);
 			}
 
-			var context = dirname(source.split("!").pop());
+			const context = dirname(source.split("!").pop());
 			return getFileContent(context, request);
 		},
 		read: function (path) {
@@ -104,7 +104,7 @@ module.exports = function(source) {
 			return fileContents[path];
 		},
 		postLoad: function postLoad(ast) {
-			return walk(ast, function (node, replace) {
+			return walk(ast, function (node) {
 				if (node.file && node.file.ast) {
 					postLoad(node.file.ast);
 				}
@@ -132,8 +132,9 @@ module.exports = function(source) {
 
 	run();
 	function run() {
+		let tmplFunc;
 		try {
-			var tmplFunc = pug.compileClient(source, {
+			tmplFunc = pug.compileClient(source, {
 				filename: req,
 				doctype: query.doctype || "html",
 				pretty: query.pretty,
@@ -156,7 +157,7 @@ module.exports = function(source) {
 			loaderContext.callback(e);
 			return;
 		}
-		var runtime = "var pug = require(" + loaderUtils.stringifyRequest(loaderContext, "!" + modulePaths.runtime) + ");\n\n";
+		const runtime = "var pug = require(" + loaderUtils.stringifyRequest(loaderContext, "!" + modulePaths.runtime) + ");\n\n";
 		loaderContext.callback(null, runtime + tmplFunc.toString() + ";\nmodule.exports = template;");
 	}
 }
